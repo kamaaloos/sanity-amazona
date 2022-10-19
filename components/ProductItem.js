@@ -1,4 +1,4 @@
-import { Button, Card, CardActionArea, CardActions, CardContent, CardMedia, Typography } from '@mui/material';
+import { Button, Card, CardActionArea, CardActions, CardContent, CardMedia, Rating, Typography } from '@mui/material';
 import React from 'react';
 import NextLink from 'next/link';
 import { urlForThumbnail } from '../utils/image';
@@ -15,9 +15,7 @@ export default function ProductItem({product}) {
                 ></CardMedia>
                 <CardContent>
                     <Typography>{product.name}</Typography>
-                    <Typography>
-                        {product.rating} ({product.numReviews} reviews) 
-                    </Typography>
+                    <Rating value={product.rating} readOnly></Rating>
                 </CardContent>
             </CardActionArea>
         </NextLink>
