@@ -17,7 +17,6 @@ import { Store } from '../utils/store';
 import { useContext } from 'react';
 import Cookie from 'js-cookie';
 
-
 export default function Layout({ title, description, children }){
     const { state, dispatch } = useContext(Store);
     const { darkMode } = state;
@@ -53,10 +52,9 @@ export default function Layout({ title, description, children }){
     });
 
     const darkModeChangeHandler = () => {
-        dispatch({type: darkMode ? 'DARK_MODE_OFF' : 'DARK_MODE ON'});
+        dispatch({type: darkMode ? 'DARK_MODE_OFF' : 'DARK_MODE_ON'});
         const newDarkMode = !darkMode;
         Cookie.set('darkMode', newDarkMode ? 'ON' : 'OFF');
-        
     };
 
     return (
@@ -79,7 +77,7 @@ export default function Layout({ title, description, children }){
                         <Box>
                             <Switch 
                                 checked={darkMode}
-                                onChange={darkModeChangeHandler}></Switch>
+                                onClick={darkModeChangeHandler}></Switch>
                         </Box>
                     </Toolbar>
                 </AppBar>
