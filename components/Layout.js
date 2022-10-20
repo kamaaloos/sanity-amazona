@@ -80,7 +80,7 @@ export default function Layout({ title, description, children }){
                                 checked={darkMode}
                                 onClick={darkModeChangeHandler}>  
                             </Switch>
-                            <NextLink href="/cart" passHref>
+                            <NextLink href="/cart" passHref >
                                 <Link>
                                     <Typography component="span">
                                         {cart.cartItems.length > 0 ? (
@@ -90,6 +90,9 @@ export default function Layout({ title, description, children }){
                                         )}
                                     </Typography>
                                 </Link>
+                            </NextLink>
+                            <NextLink href="/login" passHref>
+                                <Link>{' '} Login</Link>
                             </NextLink>
                         </Box>
                     </Toolbar>
