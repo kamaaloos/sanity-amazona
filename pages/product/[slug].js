@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { Alert, Box, Button, Card, CircularProgress, Grid, Link, List, ListItem, Rating, Typography } from "@mui/material";
 import { useContext, useEffect, useState } from "react";
 import { useSnackbar } from "notistack";
@@ -9,9 +10,11 @@ import Image  from 'next/image';
 import { urlFor, urlForThumbnail } from "../../utils/image";
 import { Store } from "../../utils/store";
 import axios from 'axios';
+import { useRouter } from "next/router";
 
 
 export default function ProductScreen(props) {
+    const router = useRouter();
     const { slug } = props;
     const { state: {cart}, dispatch } = useContext(Store);
     const {enqueueSnackbar} = useSnackbar();
@@ -59,6 +62,7 @@ export default function ProductScreen(props) {
             },
         });
         enqueueSnackbar(`${product.name} added to the cart`, {variant: 'success'});
+        router.push('/cart');
     };
 
     return (
@@ -89,7 +93,7 @@ export default function ProductScreen(props) {
                                     height={640} 
                                 />
                             </Grid>
-                            <Grid md={3} xs={12}>
+                            <Grid item md={3} xs={12}>
                                 <List>
                                     <ListItem>
                                         <Typography component="h1" variant="h1">
