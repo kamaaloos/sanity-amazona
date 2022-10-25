@@ -1,13 +1,54 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { Button, Link, List, ListItem, TextField, Typography } from '@mui/material';
-import React from 'react'
+import React, { useContext, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form';
 import Form from '../components/Form';
 import Layout from '../components/Layout';
 import NextLink  from 'next/link';
+import { useSnackbar} from 'notistack';
+import { useRouter } from 'next/router';
+import Cookie from 'js-cookie';
+import axios from 'axios';
+import { Store } from '../utils/store';
+import { getError } from '../utils/error';
 
 export default function RegisterScreen() {
-    const { handleSubmit, control, formState: {errors}} = useForm();
-    const submitHandler = async({name, email, password, confirmPassword}) => {};
+    const {state, dispatch} = useContext(Store);
+    const { userInfo } = state;
+    const router = useRouter();
+    const { redirect } = router.query;
+
+    const { enqueueSnackbar} = useSnackbar();
+    useEffect(() => {
+      if(userInfo) {
+        router.push(redirect || '/');
+      }
+    }, [router, userInfo, redirect]);
+    
+
+    const { 
+      handleSubmit, 
+      control, 
+      formState: {errors}
+    } = useForm();
+
+    const submitHandler = async({name, email, password, confirmPassword}) => {
+      if(password !== confirmPassword) {
+        enqueueSnackbar("Passwords do not match", {variant: 'error'});
+        return;
+      }
+      try {
+        const { data } = await axios.post('/api/users/register', {
+          name, email, password
+        });
+        dispatch({ type: 'USER_LOGIN', payload: data });
+        Cookie.set('userInfo', JSON.stringify(data));
+        router.push(redirect || '/');
+      } catch (error) {
+      
+        enqueueSnackbar(getError(error), {variant: 'error'});
+      }
+    };
   return (
     <Layout title="Register">
       <Form onSubmit={handleSubmit(submitHandler)}>
@@ -20,14 +61,15 @@ export default function RegisterScreen() {
                       name="name" 
                       control={control} 
                       defaultValue=""
-                      rules={{ required: true, minLength: 2}}
+                      rules={{ required: true, 
+                        minLength: 2 }}
                       render={({field}) => (
                         <TextField variant="outlined" fullWidth id="name" label="Name" 
                           inputProps={{type: 'text'}}
                           error={Boolean(errors.name)}
                           helperText={
                             errors.name 
-                            ? errors.email.type === minLength 
+                            ? errors.name.type === 'minLength' 
                               ? 'Name is not valid' 
                               : 'Please enter a valid name' 
                             : ''}
@@ -44,7 +86,8 @@ export default function RegisterScreen() {
                       name="email" 
                       control={control} 
                       defaultValue=""
-                      rules={{ required: true, pattern: /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/ }}
+                      rules={{ required: true, 
+                          pattern: /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/ }}
                       render={({field}) => (
                         <TextField variant="outlined" fullWidth id="email" label="Email" 
                           inputProps={{type: 'email'}}
@@ -78,7 +121,7 @@ export default function RegisterScreen() {
                           error={Boolean(errors.password)}
                           helperText={
                             errors.password 
-                            ? errors.password.type === minLength 
+                            ? errors.password.type === 'minLength' 
                               ? 'Password length should be more than 5 characters' 
                               : 'Password is required' 
                             : ''}
@@ -102,7 +145,7 @@ export default function RegisterScreen() {
                           error={Boolean(errors.confirmPassword)}
                           helperText={
                             errors.confirmPassword 
-                            ? errors.confirmPassword.type === minLength 
+                            ? errors.confirmPassword.type === 'minLength' 
                               ? 'confirmPassword length should be more than 5 characters' 
                               : 'ConfirmPassword is required' 
                             : ''}
@@ -118,7 +161,7 @@ export default function RegisterScreen() {
               </ListItem>
               <ListItem>
                 You have an account 
-                <NextLink href="/login" passHref>
+                <NextLink href={`/login?redirect=${redirect || '/'}`} passHref>
                   <Link>Login</Link>
                 </NextLink>
               </ListItem> 

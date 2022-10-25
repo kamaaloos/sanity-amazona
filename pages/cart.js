@@ -22,10 +22,12 @@ import { Store } from '../utils/store';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
 import { useSnackbar } from "notistack";
+import { useRouter } from 'next/router';
 
 
 function CartScreen(){
     const {enqueueSnackbar} = useSnackbar();
+    const router = useRouter();
     const {
         state: { 
             cart: {cartItems},
@@ -141,7 +143,7 @@ function CartScreen(){
                                     </Typography>
                                 </ListItem>
                                 <ListItem>
-                                  <Button fullWidth color="primary" variant="contained">Check Out</Button>
+                                  <Button onClick={() => {router.push('/shipping')}} fullWidth color="primary" variant="contained">Check Out</Button>
                                 </ListItem>
                             </List>
                            </Card>

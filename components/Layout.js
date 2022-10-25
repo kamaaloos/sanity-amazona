@@ -4,9 +4,12 @@ import {
     AppBar, 
     Badge, 
     Box,
+    Button,
     Container, 
     CssBaseline, 
     Link, 
+    Menu, 
+    MenuItem, 
     Switch, 
     ThemeProvider, 
     Toolbar, 
@@ -15,12 +18,15 @@ import {
 import NextLink from 'next/link';
 import classes from '../utils/classes';
 import { Store } from '../utils/store';
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import Cookie from 'js-cookie';
+import { useRouter } from 'next/router';
+
 
 export default function Layout({ title, description, children }){
     const { state, dispatch } = useContext(Store);
-    const { darkMode, cart } = state;
+    const { darkMode, cart, userInfo } = state;
+    const router = useRouter();
     const theme = createTheme({
         components: {
             MuiLink: {
@@ -57,7 +63,25 @@ export default function Layout({ title, description, children }){
         const newDarkMode = !darkMode;
         Cookie.set('darkMode', newDarkMode ? 'ON' : 'OFF');
     };
-
+    const [anchorEl, setAnchorEl] = useState(null);
+    const loginMenuCloseHandler = (e, redirect) => {
+        setAnchorEl(null);
+        if (redirect) {
+            router.push(redirect);
+        }
+    };
+    const loginClickHandler = (e) => {
+        setAnchorEl(e.currentTarget);
+    };
+    const logoutClickHandler = () => {
+        setAnchorEl(null);
+        dispatch({ type: 'USER_LOGOUT' });
+        Cookie.remove('userInfo');
+        Cookie.remove('cartItems');
+        Cookie.remove('shippingAddress');
+        Cookie.remove('paymentMethod');
+        router.push('/');
+    };
     return (
         <>
             <Head>
@@ -91,9 +115,30 @@ export default function Layout({ title, description, children }){
                                     </Typography>
                                 </Link>
                             </NextLink>
-                            <NextLink href="/login" passHref>
-                                <Link>{' '} Login</Link>
-                            </NextLink>
+                            {userInfo ? (
+                                <>
+                                    <Button 
+                                        aria-controls="simple-menu"
+                                        aria-haspopup="true"
+                                        sx={classes.navbarButton}
+                                        onClick={loginClickHandler}>
+                                        {userInfo.name}
+                                    </Button>
+                                    <Menu 
+                                        id="simple-menu" 
+                                        anchorEl={anchorEl}
+                                        keepMounted 
+                                        open={Boolean(anchorEl)}
+                                        onClose = {loginMenuCloseHandler}>
+                                        <MenuItem onClick={ (e) => loginMenuCloseHandler(e.preventDefault, '/profile') }>Profile</MenuItem>
+                                        <MenuItem onClick={ (e) => logoutClickHandler(e.preventDefault, '/logout') }>Logout</MenuItem>
+                                    </Menu>
+                                </>
+                            ) : (
+                                <NextLink href="/login" passHref>
+                                <Link>Login</Link>
+                            </NextLink> )}
+                            
                         </Box>
                     </Toolbar>
                 </AppBar>
