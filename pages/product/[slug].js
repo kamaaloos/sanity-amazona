@@ -44,7 +44,7 @@ export default function ProductScreen(props) {
     const addToCartHandler = async () => {
         const existItem = cart.cartItems.find((x) =>x._id === product._id);
         const quantity = existItem ? existItem.quantity + 1 : 1;
-        const { data } = await axios.get(`/api/product/${product._id}`);
+        const { data } = await axios.get(`/api/products/${product._id}`);
         if (data.countInStock < quantity) {
             enqueueSnackbar('Sorry. Product Item is out of stock', {variant: 'error'});
             return;
@@ -77,7 +77,7 @@ export default function ProductScreen(props) {
                 (
                     <Box>
                         <Box sx={classes.section}>
-                            <NextLink href="/" passhref>
+                            <NextLink href="/" passHref>
                                 <Link >
                                     <Typography>back to result</Typography>
                                 </Link>

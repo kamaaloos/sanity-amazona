@@ -15,6 +15,7 @@
     "@mui/icons-material": "^5.10.9",
     "@mui/material": "^5.10.9",
     "@mui/styles": "^5.10.9",
+    "@paypal/react-paypal-js": "^7.8.1",
     "@sanity/client": "^3.4.1",
     "@sanity/image-url": "^1.0.1",
     "axios": "^1.1.3",

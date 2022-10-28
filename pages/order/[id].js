@@ -1,6 +1,7 @@
-import { Alert, Card, CircularProgress, Grid, Link, List, ListItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Alert, Box, Card, CircularProgress, Grid, Link, List, ListItem, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import dynamic from 'next/dynamic';
 import React, { useContext, useEffect, useReducer } from 'react';
+import {PayPalButtons, usePayPalScriptReducer} from '@paypal/react-paypal-js';
 import Layout from '../../components/Layout';
 import classes from '../../utils/classes';
 import Image from 'next/image';
@@ -9,6 +10,7 @@ import { Store } from '../../utils/store';
 import { useRouter } from 'next/router';
 import { getError } from '../../utils/error';
 import axios from 'axios';
+import { useSnackbar } from 'notistack';
 
 function reducer(state, action) {
     switch (action.type){
@@ -18,13 +20,21 @@ function reducer(state, action) {
             return {...state, loading: false, order: action.payload, error: ''};
         case 'FETCH_FAIL':
             return {...state, loading: false, error: action.payload};   
+        case 'PAY_REQUEST':
+            return {...state, loadingPay: true};   
+        case 'PAY_SUCCESS':
+            return {...state, loadingPay: false, successPay: true};   
+        case 'PAY_FAIL':
+            return {...state, loadingPay: false, errorPay: action.payload};   
+        case 'PAY_RESET':
+            return {...state, loadingPay: false, successPay: false, errorPay: ''};   
     };
 };
 
 function OrderScreen({ params }) {
     const { id: orderId } = params;
     const [
-        { loading, error, order},
+        { loading, error, order, successPay},
         dispatch,
         ] = useReducer(reducer, {
         loading: true,
@@ -36,7 +46,7 @@ function OrderScreen({ params }) {
         shippingAddress,
         paymentMethod,
         orderItems,
-        itemPrice,
+        itemsPrice,
         taxPrice,
         shippingPrice,
         totalPrice,
@@ -49,6 +59,9 @@ function OrderScreen({ params }) {
     const router = useRouter();
     const { state} = useContext(Store);
     const { userInfo } = state;
+    const {enqueueSnackbar} = useSnackbar();
+
+    const [{ isPending }, paypalDispatch] = usePayPalScriptReducer();
 
     useEffect(() => {
         if(!userInfo){
@@ -61,12 +74,69 @@ function OrderScreen({ params }) {
                     headers: {authorization: `Bearer ${userInfo.token}`},
                 });
                 dispatch({type: 'FETCH_SUCCESS', payload: data});
+
             } catch (error) {
                 dispatch({type: 'FETCH_FAIL', payload: getError(error)});
             }
         };
-        fetchOrder();
-    }, [orderId, router, userInfo]);
+        if(!order._id || successPay || (order._id && order._id !== orderId)){
+            fetchOrder();
+            if(successPay){
+                dispatch({ type: 'PAY_RESET'});
+            }
+        }else{
+            const loadPaypalScript = async () => {
+                const { data: clientId } = await axios.get('/api/keys/paypal', {
+                    headers: {authorization: `Bearer ${userInfo.token}`},
+                });
+                paypalDispatch({
+                    type: 'resetOptions',
+                    value: {
+                        'client-id': clientId,
+                        currency: 'USD',
+                    },
+                });
+                paypalDispatch({type: 'setLoadingStatus', value: 'pending'});
+            };
+            loadPaypalScript();
+        }
+    }, [order, orderId, paypalDispatch, router, successPay, userInfo]);
+    function createOrder(data, action){
+        return action.order.create({
+            purchase_units: [
+                {
+                    amount: { value: totalPrice},
+                },
+            ],
+        }).then((orderID) => {
+            return orderID;
+        });
+    }
+    function onApprove(data, actions){
+        return actions.order.capture().then(async function(details){
+            try {
+                dispatch({ type: 'PAY_REQUEST'});
+                    
+                const {data} = await axios.put(
+                    `/api/orders/${order._id}/pay`,
+                    details, 
+                    {
+                        headers: {authorization: `Bearer ${userInfo.token}`},
+                    }
+                );
+                dispatch({ type: 'PAY_SUCCESS', payload: data});
+                enqueueSnackbar('Order is paid', {variant: 'success'});
+                dispatch({ type: 'PAY_RESET'});
+            } catch (error) {
+                dispatch({ type: 'PAY_FAIL', payload: getError(error)});
+                enqueueSnackbar(getError(error), {variant: 'error'});
+            }
+        });
+    }
+    
+    function onError(err){
+        enqueueSnackbar(getError(error), {variant: 'error'});
+    }
 
   return (
     <Layout title={`Order ${orderId}`}>
@@ -182,7 +252,7 @@ function OrderScreen({ params }) {
                     <Card sx={classes.section}>
                         <List>
                             <ListItem>
-                                <Typography component="h2" variant="h2">Order Summary</Typography>
+                                <Typography variant="h2">Order Summary</Typography>
                             </ListItem>
                             <ListItem>
                                 <Grid container>
@@ -190,7 +260,7 @@ function OrderScreen({ params }) {
                                         <Typography>Item:</Typography>
                                     </Grid>
                                     <Grid item xs={6}>
-                                        <Typography align="right">${itemPrice}</Typography>
+                                        <Typography align="right">${itemsPrice}</Typography>
                                     </Grid>
                                 </Grid>
                             </ListItem>
@@ -217,13 +287,32 @@ function OrderScreen({ params }) {
                             <ListItem>
                                 <Grid container>
                                     <Grid item xs={6}>
-                                        <Typography>Total:</Typography>
+                                        <Typography><strong>Total:</strong></Typography>
                                     </Grid>
                                     <Grid item xs={6}>
-                                        <Typography align="right">${totalPrice}</Typography>
+                                        <Typography align="right">
+                                        <strong>${totalPrice}</strong>
+                                        </Typography>
                                     </Grid>
                                 </Grid>
                             </ListItem>
+                            {!isPaid && (
+                                <ListItem>
+                                    {isPending ? (
+                                        <CircularProgress />
+                                    ): (
+                                        <Box sx={classes.fullWidth}>
+                                            <PayPalButtons
+                                                createOrder={createOrder}
+                                                onApprove={onApprove}
+                                                onError={onError}
+                                             >
+
+                                            </PayPalButtons>
+                                        </Box>
+                                    )}
+                                </ListItem>
+                            )}
                         </List>
                     </Card>
                 </Grid>

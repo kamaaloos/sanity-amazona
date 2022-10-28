@@ -41,8 +41,8 @@ export default {
             type: 'string',
         },
         {
-            name: 'catagory',
-            title: 'Catagory',
+            name: 'category',
+            title: 'Category',
             type: 'string',
         },
         {

@@ -7,25 +7,41 @@ import {
     Button,
     Container, 
     CssBaseline, 
+    Divider, 
+    Drawer, 
+    IconButton, 
+    InputBase, 
     Link, 
+    List, 
+    ListItem, 
+    ListItemText, 
     Menu, 
     MenuItem, 
     Switch, 
     ThemeProvider, 
     Toolbar, 
-    Typography 
+    Typography, 
+    useMediaQuery
 } from '@mui/material';
 import NextLink from 'next/link';
 import classes from '../utils/classes';
 import { Store } from '../utils/store';
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import Cookie from 'js-cookie';
 import { useRouter } from 'next/router';
+import MenuIcon from '@mui/icons-material/Menu'
+import SearchIcon from '@mui/icons-material/Search'
+import CancelIcon from '@mui/icons-material/Cancel'
+import axios from 'axios';
+import { getError } from '../utils/error';
+import { useSnackbar } from 'notistack';
 
 
 export default function Layout({ title, description, children }){
     const { state, dispatch } = useContext(Store);
     const { darkMode, cart, userInfo } = state;
+    const [categories, setCategories] = useState([]);
+    const { enqueueSnackbar} = useSnackbar();
     const router = useRouter();
     const theme = createTheme({
         components: {
@@ -82,6 +98,39 @@ export default function Layout({ title, description, children }){
         Cookie.remove('paymentMethod');
         router.push('/');
     };
+
+    const [sidebarVisible, setSidebarVisible] = useState(false)
+    const sidebarOpenHandler = () => {
+        setSidebarVisible(true);
+    };
+
+    const sidebarCloseHandler = () => {
+        setSidebarVisible(false);
+    };
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const { data } = await axios.get(`/api/products/categories`);
+                setCategories(data);
+            } catch (error) {
+                enqueueSnackbar(getError(error), {variant: 'error'})
+            }
+        }
+        fetchCategories();
+    }, [enqueueSnackbar]);
+
+    const isDesktop = useMediaQuery('(min-width: 600px)');
+
+    const [query, setQuery] = useState('');
+    const queryChangeHandler = (e) => {
+        setQuery(e.target.value)
+    };
+    const submitHandler = (e) => {
+        e.preventDefault();
+        router.push(`/search?query=${query}`);
+    };
+
     return (
         <>
             <Head>
@@ -93,18 +142,80 @@ export default function Layout({ title, description, children }){
                 <AppBar position="static" sx={classes.appbar}>
                     <Toolbar sx={classes.toolbar}>
                         <Box display="flex" alignItems="center">
+                        <IconButton
+                            edge="start"
+                            aria-label='open drawer'
+                            onClick={sidebarOpenHandler}
+                            sx={classes.menuButton}
+                        >
+                            <MenuIcon sx={classes.navbarButton} />
+                        </IconButton>
                         <NextLink href="/" passHref>
                             <Link>
                                 <Typography sx={classes.brand}>amazona</Typography>
                             </Link>
                         </NextLink>
                         </Box>
+                        <Drawer anchor='left'
+                            open={sidebarVisible}
+                            onClose={sidebarCloseHandler}>
+                            <List>
+                                <ListItem>
+                                    <Box 
+                                        display="flex"
+                                        alignItems="center"
+                                        justifyContent="space-between">
+                                        <Typography>Shopping by category</Typography>
+                                        <IconButton
+                                            aria-label='close'
+                                            onClick={sidebarCloseHandler}
+                                        >
+                                            <CancelIcon />
+                                        </IconButton>
+                                    </Box>
+                                </ListItem>
+                                <Divider light />
+                                {categories.map(category =>(
+                                    <NextLink
+                                        key={category}
+                                        href={`/search?category=${category}`}
+                                        passHref
+                                    >
+                                        <ListItem
+                                            button
+                                            component="a"
+                                            onClick={sidebarCloseHandler}>
+                                            <ListItemText primary={category}></ListItemText>
+                                        </ListItem>
+                                    </NextLink>
+                                ))}
+                            </List>
+                        </Drawer>
+                        <Box sx={isDesktop ? classes.visible : classes.hidden}>
+                           <form onSubmit ={submitHandler}>
+                            <Box sx={classes.searchForm}>
+                                <InputBase
+                                  name="query"
+                                  sx={classes.searchInput}
+                                  placeholder="Search products"
+                                  onChange={queryChangeHandler}
+                                />
+                                <IconButton
+                                  type="submit"
+                                  sx={classes.searchButton}
+                                  aria-label="search"
+                                >
+                                    <SearchIcon />
+                                </IconButton>
+                            </Box>
+                           </form>
+                        </Box>
                         <Box>
                             <Switch 
                                 checked={darkMode}
                                 onClick={darkModeChangeHandler}>  
                             </Switch>
-                            <NextLink href="/cart" passHref >
+                            <NextLink href="cart" passHref >
                                 <Link>
                                     <Typography component="span">
                                         {cart.cartItems.length > 0 ? (
@@ -130,8 +241,9 @@ export default function Layout({ title, description, children }){
                                         keepMounted 
                                         open={Boolean(anchorEl)}
                                         onClose = {loginMenuCloseHandler}>
-                                        <MenuItem onClick={ (e) => loginMenuCloseHandler(e.preventDefault, '/profile') }>Profile</MenuItem>
-                                        <MenuItem onClick={ (e) => logoutClickHandler(e.preventDefault, '/logout') }>Logout</MenuItem>
+                                        <MenuItem onClick={ (e) => loginMenuCloseHandler(e, '/profile') }>Profile</MenuItem>
+                                        <MenuItem onClick={ (e) => loginMenuCloseHandler(e, '/order-history') }>Order History</MenuItem>
+                                        <MenuItem onClick={ (e) => logoutClickHandler(e, '/logout') }>Logout</MenuItem>
                                     </Menu>
                                 </>
                             ) : (
